@@ -1,9 +1,10 @@
-# 🔐 SafeLine WAF Evaluation Lab with DVWA on LAMP Stack
+## 🔐 Web Application Attack & Defense Lab: DVWA on LAMP with WAF
+
 
 ## 📖 Overview
 
 This is a step-by-step homelab project where I deployed, secured, and tested a vulnerable DVWA web application using a Web Application Firewall (SafeLine WAF).  
-It covers full-stack configuration, simulated attacks (SQLi, XSS, CSRF, File Upload, etc.), and defensive measures (WAF rules, SSL, IP blocking, log analysis).
+It covers full-stack configuration, simulated attacks (**SQLi, XSS,DoS,Cmd Injection, File Upload**, etc.), and defensive measures (WAF rules, **SSL, IP blocking, log analysis**).
 
 ---
 
@@ -14,10 +15,11 @@ It covers full-stack configuration, simulated attacks (SQLi, XSS, CSRF, File Upl
 - **Target VM:** Ubuntu 22.04 LTS (LAMP + DVWA)
 - **Attacker VM:** Kali Linux
 - **WAF:** SafeLine WAF (reverse proxy)
-
+  
 ---
 
 ## 1️⃣ Installing and Configuring LAMP Stack
+
 Install Apache2, PHP, and MySQL:
 ```bash
 sudo apt update
@@ -25,11 +27,14 @@ sudo apt install apache2 mysql-server php libapache2-mod-php php-mysql
 ```
 
 Secure the MySQL Installation:
+
 ```bash
 sudo mysql_secure_installation
 ```
+
  ## 2️⃣ Installing and Configuring Damn Vulnerable Web App
 (DVWA)
+
 ```bash
 cd /var/www/html
 sudo git clone https://github.com/digininja/DVWA.git
@@ -43,7 +48,9 @@ $_DVWA[ 'db_database' ] = 'dvwa';
 $_DVWA[ 'db_user' ]     = 'dvwa_user';
 $_DVWA[ 'db_password' ] = 'p@ssw0rd';
 ```
-📸 Screenshot — DVWA Configured:
+
+![DVWA Config](screenshots/dvwa-config.png)
+
 
 ## 3️⃣ Setting up MySQL for DVWA
 
@@ -53,7 +60,6 @@ CREATE USER 'dvwa_user'@'localhost' IDENTIFIED BY 'p@ssw0rd';
 GRANT ALL ON dvwa.* TO 'dvwa_user'@'localhost';
 FLUSH PRIVILEGES;
 ```
-📸 Screenshot — MySQL Setup:
 
 ## 4️⃣ Changing the DVWA Listening Port to 8080
  
@@ -88,8 +94,10 @@ sudo systemctl restart apache2
 
 ```bash
 http://<Ubuntu_IP>:8080/DVWA
-```  
-![DVWA L;](screenshots/dvwa-login.png)
+```
+
+
+![DVWA Login Page](screenshots/dvwa-loginpage.png)
 
 
 ● **Initialize DVWA:**
@@ -112,14 +120,19 @@ Add the following line at the end (replace <Ubuntu_IP> with the actual IP of you
 
 ## 6️⃣ Creating a Self-Signed SSL Certificate
 To enable HTTPS on DVWA through the WAF, generate a self-signed SSL certificate on the Ubuntu server.
+
 ```bash
 sudo mkdir /etc/ssl/dvwa
 sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 -keyout /etc/ssl/dvwa/dvwa.key \
 -out /etc/ssl/dvwa/dvwa.crt
 ```
+
 This creates the certificate and private key in /etc/ssl/dvwa/.
-📸 Screenshot — SSL certificate files created:
+
+
+![SSL Certificate Generation](screenshots/ssl-cert-generation.png)
+
 
 ## 7️⃣ Installing and Configuring SafeLine WAF
 SafeLine WAF is deployed as a reverse proxy to protect the DVWA application.
@@ -136,7 +149,9 @@ Follow the on-screen prompts to complete installation, you will be shown:
  ● Admin username & password
 
  ● WAF Management URL typically on port 9443
-
+ 
+ 
+![SafeLine Install](screenshots/safeline-install.png)
 
 
 🔷 7.2 Importing the Self-Signed Certificate
@@ -155,7 +170,7 @@ Use the SafeLine WAF management console to add a new application:
 
 **DNS Name:** dvwa.local
 
-**Backend URL (reverse proxy):** http://<UbuntuIP>:8080
+**Backend URL (reverse proxy):** http://<UbuntuIP>:8080 
 
 Delete port 80; only enable port 443
 
@@ -164,9 +179,15 @@ Delete port 80; only enable port 443
 Attach the SSL Certificate (if you want the WAF to serve HTTPS).
 
 
+![DVWA Onboard](screenshots/DVWA-onboard.png)
+
+
+![WAF Interface](screenshots/WAF-interface.png)
+
+
 ## 🧪 Attack Simulations & WAF Defense ##
 
-This section documents the attacks performed using the DVWA web interface from the Kali Linux attacker VM, and how SafeLine WAF detected, logged, and blocked them.
+This section documents the attacks performed using the DVWA web interface from the Kali Linux attacker VM, and how SafeLine WAF **detected, logged, and blocked** them.
 The WAF security levels were adjusted to observe different blocking thresholds, and additional custom defenses were configured through the WAF GUI.
 
 🔷 Attacks Performed via DVWA:
@@ -181,45 +202,76 @@ The following attacks were executed by navigating DVWA’s vulnerable modules an
 | **File Upload (PHP Shell)**    | Uploaded `shell.php` disguised as `.jpg` | ✅ Blocked & logged |
 | **HTTP Flood (DoS)**           | Excessive requests from Kali using DVWA  | ✅ Blocked & logged |
 
+
+![Command Injection Attack](screenshots/cmd-injection-attack.jpg)
+
+
 ✅ After each attack, the WAF logs were reviewed to confirm detection and identify attacker details (source IP, timestamp, attack type).
 
-📸 Example — WAF attack logs:
 
+![Attack Logs](screenshots/attack-logs.png)
+
+
+![Command Injection](screenshots/cmd-injection.png)
 
 ## 🔷 WAF Security Levels
 
 The WAF’s security level was adjusted (Low → Medium → High) to observe how strictness impacted detection and blocking.
 Higher levels resulted in more aggressive blocking of suspicious patterns.
 
-📸 Example — Security level settings:
+
+![Security Levels](screenshots/security-levels.png)
+
 
 ## 🔷 Additional WAF Protections
 
-✅ Authentication Gateway
+**✅ Authentication Gateway**
+
 Enabled authentication on the DVWA endpoint to require login before accessing the app.
 Verified that unauthenticated requests were blocked at the WAF.
-📸 Example — Auth prompt:
 
 
-✅ Custom Deny Rules
+![Auth Page](screenshots/auth-page.png)
+
+
+![Authentication Logs](screenshots/authentication-logs.png)
+
+
+**✅ Custom Deny Rules**
 
 Added a deny rule for the Kali VM IP (192.168.x.x) to completely block the attacker.
-📸 Example — Deny rule:
 
 
-✅ HTTP Flood Defense
+ ![Custom Deny Rule](screenshots/custom-deny-rule.png)
+ 
+
+**✅ HTTP Flood Defense(DoS)**
 
 Configured thresholds & penalties to mitigate DoS attacks.
 Verified that excessive requests were detected and blocked.
-📸 Example — HTTP Flood detected:
 
 
-These tests demonstrated SafeLine WAF’s ability to:
-
-Detect & block common web attacks
-
-Enforce custom access policies
-
-Log detailed attack information for review
+![HTTP Flood Rate Limiting](screenshots/httpflood-ratelimiting.png)
 
 
+![HTTP Flood Attack](screenshots/http-flood-attack.jpg)
+
+
+![HTTP Flood Logs](screenshots/http-flood-logs.png)
+
+
+## 🚀 Conclusion
+
+This project strengthened my technical skills in the following areas:
+
+✅ LAMP Stack Administration
+
+✅ Web Application Firewall Reverse Proxy & SSL/TLS Configuration
+
+✅ Offensive Testing & Payload Crafting
+
+✅ Defensive Rule Creation & Log Analysis
+
+✅ Linux Networking & Virtualization
+
+✅ Documentation & Security Reporting
