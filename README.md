@@ -88,8 +88,9 @@ sudo systemctl restart apache2
 
 ```bash
 http://<Ubuntu_IP>:8080/DVWA
-```
-📸 Screenshot — DVWA running on port 8080:
+```  
+![DVWA L;](screenshots/dvwa-login.png)
+
 
 ● **Initialize DVWA:**
 
@@ -136,8 +137,7 @@ Follow the on-screen prompts to complete installation, you will be shown:
 
  ● WAF Management URL typically on port 9443
 
-📸 Screenshot — SafeLine WAF installed:
-📸 Screenshot — WAF Dashboard:
+
 
 🔷 7.2 Importing the Self-Signed Certificate
 
@@ -146,7 +146,6 @@ Log in to the SafeLine WAF web interface and upload the SSL certificate you gene
 ● Certificate File: /etc/ssl/dvwa/dvwa.crt
 
 ● Key File: /etc/ssl/dvwa/dvwa.key
-
 
 
 
@@ -164,101 +163,63 @@ Delete port 80; only enable port 443
 
 Attach the SSL Certificate (if you want the WAF to serve HTTPS).
 
-📸 Screenshot — DVWA application onboarded:
 
-🧪 Attack Simulation and Defense
-🔸 SQL Injection (SQLi)
-Payload:
+## 🧪 Attack Simulations & WAF Defense ##
 
-```bash
-' OR '1'='1
-```
-📸 Screenshot — SQLi Blocked by WAF:
+This section documents the attacks performed using the DVWA web interface from the Kali Linux attacker VM, and how SafeLine WAF detected, logged, and blocked them.
+The WAF security levels were adjusted to observe different blocking thresholds, and additional custom defenses were configured through the WAF GUI.
 
-🔸 Cross-Site Scripting (XSS)
-Payload:
+🔷 Attacks Performed via DVWA:
 
-```bash
-<script>alert(1)</script>
-```
-📸 Screenshot — XSS Blocked by WAF:
+The following attacks were executed by navigating DVWA’s vulnerable modules and submitting crafted payloads:
 
-🔸 CSRF (Cross-Site Request Forgery)
-Created malicious HTML form to reset admin password
+| Attack Type                    | Payload / Method                         | WAF Action         |
+| ------------------------------ | ---------------------------------------- | ------------------ |
+| **SQL Injection**              | `' OR '1'='1`                            | ✅ Blocked & logged |
+| **Cross-Site Scripting (XSS)** | `<script>alert(1)</script>`              | ✅ Blocked & logged |
+| **Command Injection**          | `127.0.0.1; ls -la`                      | ✅ Blocked & logged |
+| **File Upload (PHP Shell)**    | Uploaded `shell.php` disguised as `.jpg` | ✅ Blocked & logged |
+| **HTTP Flood (DoS)**           | Excessive requests from Kali using DVWA  | ✅ Blocked & logged |
 
-Executed while logged in as admin
+✅ After each attack, the WAF logs were reviewed to confirm detection and identify attacker details (source IP, timestamp, attack type).
 
-📸 Screenshot — CSRF Attempt:
+📸 Example — WAF attack logs:
 
-📸 Screenshot — CSRF Blocked:
 
-🔸 Command Injection
-Payload:
+## 🔷 WAF Security Levels
 
-```bash
-127.0.0.1; ls -la
-```
-📸 Screenshot — Command Executed:
+The WAF’s security level was adjusted (Low → Medium → High) to observe how strictness impacted detection and blocking.
+Higher levels resulted in more aggressive blocking of suspicious patterns.
 
-📸 Screenshot — WAF Blocked CMD Injection:
+📸 Example — Security level settings:
 
-🔸 File Upload (PHP Shell)
-Uploaded shell.php:
+## 🔷 Additional WAF Protections
 
-```bash
-<?php system($_GET['cmd']); ?>
-```
-Accessed via browser:
+✅ Authentication Gateway
+Enabled authentication on the DVWA endpoint to require login before accessing the app.
+Verified that unauthenticated requests were blocked at the WAF.
+📸 Example — Auth prompt:
 
-```bash
-http://dvwa.local/DVWA/hackable/uploads/shell.php?cmd=id
-```
-📸 Screenshot — Shell Uploaded:
 
-📸 Screenshot — File Upload Blocked by WAF:
+✅ Custom Deny Rules
 
-🔸 HTTP Flood Simulation
-bash
-Copy code
-ab -n 1000 -c 100 http://dvwa.local/DVWA/
-📸 Screenshot — WAF Detected DoS:
+Added a deny rule for the Kali VM IP (192.168.x.x) to completely block the attacker.
+📸 Example — Deny rule:
 
-🔷 WAF Rule Tuning
-Created custom deny rule to block attacker IP:
 
-bash
-Copy code
-deny if client.ip == "192.168.0.66"
-📸 Screenshot — Custom Rule Created:
+✅ HTTP Flood Defense
 
-📊 Summary Table of Attacks
-Attack Type	Status
-SQL Injection	✅ Blocked
-XSS	✅ Blocked
-CSRF	✅ Blocked
-File Upload	✅ Blocked
-CMD Injection	✅ Blocked
-HTTP Flood	✅ Blocked
-Auth Gateway Enabled	✅ Successful
-Custom IP Rules	✅ Implemented
+Configured thresholds & penalties to mitigate DoS attacks.
+Verified that excessive requests were detected and blocked.
+📸 Example — HTTP Flood detected:
 
-🧰 Skills Demonstrated
-LAMP Stack Administration
 
-SafeLine WAF Reverse Proxy & SSL
+These tests demonstrated SafeLine WAF’s ability to:
 
-Offensive Testing & Payload Crafting
+Detect & block common web attacks
 
-Defensive Rule Creation & Log Analysis
+Enforce custom access policies
 
-Linux Networking & Virtualization
+Log detailed attack information for review
 
-Documentation & Security Reporting
-
-📎 Related Links
-SafeLine GitHub
-
-DVWA GitHub
-
-Apache HTTP Server
 
